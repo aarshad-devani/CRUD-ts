@@ -4,7 +4,7 @@ import { IPaginateParams, IWithPagination } from "knex-paginate";
 
 const defaultPaginatedRequest: IPaginateParams = { currentPage: 1, perPage: 10 };
 
-export type IEventType = "created" | "udpated" | "deleted";
+export type IEventType = "created" | "updated" | "deleted";
 
 export type ICRUDInstanceOptions<T = any> = {
   tableName: string;
@@ -130,18 +130,18 @@ export const GetCRUDInstance = <T = any>(config: ICRUDInstanceOptions) => {
     const insertedData = (await knexInstance<T>(config.tableName)
       .returning("*")
       .insert(insertionData as any)) as T[];
-
+    config.onEvent && config.onEvent("created", insertedData);
     return insertedData;
   };
 
   const UpdateData = async (data: T): Promise<T> => {
     let dataToBeUpdated: any = { ...data };
     delete dataToBeUpdated[config.identifier];
-    const updateData = await knexInstance<T>(config.tableName)
-      .returning(config.identifier as string)
-      .update(dataToBeUpdated);
-
-    return dataToBeUpdated as T;
+    const updateData = (await knexInstance<T>(config.tableName)
+      .returning("*")
+      .update(dataToBeUpdated)) as T;
+    config.onEvent && config.onEvent("updated", updateData);
+    return updateData;
   };
 
   const DeleteData = async (value: any): Promise<boolean> => {
@@ -149,6 +149,7 @@ export const GetCRUDInstance = <T = any>(config: ICRUDInstanceOptions) => {
       await knexInstance<T>(config.tableName)
         .where({ [config.identifier as string]: value })
         .delete();
+      config.onEvent && config.onEvent("deleted", { [config.identifier]: value });
       return true;
     } catch (err) {
       return false;
