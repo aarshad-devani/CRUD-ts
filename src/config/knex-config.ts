@@ -1,5 +1,8 @@
 import knex from "knex";
 import { attachPaginate } from "knex-paginate";
+import { config } from "dotenv";
+
+config();
 
 export const knexInstance = knex({
   client: "pg",

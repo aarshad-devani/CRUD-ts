@@ -24,7 +24,7 @@ const onUserTableChanges = (event: IEventType, data: IUser | IUser[]) => {
 app.use(
   "/api/v1/user",
   GetCRUDInstance<IUser>({
-    tableName: "Users",
+    tableName: "users",
     identifier: "id",
     onEvent: onUserTableChanges,
     addAuditFields: true,

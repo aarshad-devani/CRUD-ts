@@ -18,7 +18,7 @@ export const GetCRUDInstance = <T = any>(config: ICRUDInstanceOptions) => {
 
   app.post("/getAll", (req: Request, res: Response) => {
     const { paginationParams } = req.body;
-    GetPaginatedData(paginationParams)
+    GetPaginatedData(paginationParams ?? defaultPaginatedRequest)
       .then((resp) => {
         res.status(200).send(resp);
       })
@@ -120,15 +120,18 @@ export const GetCRUDInstance = <T = any>(config: ICRUDInstanceOptions) => {
     return toBeReturnedData as T;
   };
 
-  const AddData = async (data: T | T[]): Promise<T> => {
-    let dataToBeAdded: any = { ...data };
-    delete dataToBeAdded[config.identifier];
+  const AddData = async (data: T | T[]): Promise<T[]> => {
+    const insertionData: T[] = (Array.isArray(data) ? data : [data]).map((iteration: T) => {
+      let dataToBeAdded: any = { ...iteration };
+      delete dataToBeAdded[config.identifier];
+      return dataToBeAdded;
+    });
 
-    const insertedData = await knexInstance<T>(config.tableName)
-      .returning(config.identifier as string)
-      .insert(dataToBeAdded);
+    const insertedData = (await knexInstance<T>(config.tableName)
+      .returning("*")
+      .insert(insertionData as any)) as T[];
 
-    return dataToBeAdded as T;
+    return insertedData;
   };
 
   const UpdateData = async (data: T): Promise<T> => {
