@@ -1,4 +1,5 @@
 import knex from "knex";
+import { attachPaginate } from "knex-paginate";
 
 export const knexInstance = knex({
   client: "pg",
@@ -9,3 +10,5 @@ export const knexInstance = knex({
     max: 10,
   },
 });
+
+attachPaginate();
