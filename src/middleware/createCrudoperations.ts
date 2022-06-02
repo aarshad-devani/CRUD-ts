@@ -16,6 +16,35 @@ export type ICRUDInstanceOptions<T = any> = {
 export const GetCRUDInstance = <T = any>(config: ICRUDInstanceOptions) => {
   const app = Router();
 
+  app.get("/all", (req: Request, res: Response) => {
+    const {
+      currentPage = defaultPaginatedRequest.currentPage,
+      perPage = defaultPaginatedRequest.perPage,
+    } = req.query;
+    GetPaginatedData({
+      currentPage: parseInt(currentPage as string),
+      perPage: parseInt(perPage as string),
+    })
+      .then((resp) => {
+        res.status(200).send(resp);
+      })
+      .catch((err) => {
+        console.error("Error Making request\n", err);
+        res.status(500).send({ message: err.message ?? "Error Making request" });
+      });
+  });
+
+  app.get("/one", (req: Request, res: Response) => {
+    GetOne(req.query as Partial<T>)
+      .then((resp) => {
+        res.status(200).send(resp);
+      })
+      .catch((err) => {
+        console.error("Error Making request\n", err);
+        res.status(500).send({ message: err.message ?? "Error Making request" });
+      });
+  });
+
   app.post("/getAll", (req: Request, res: Response) => {
     const { paginationParams } = req.body;
     GetPaginatedData(paginationParams ?? defaultPaginatedRequest)
@@ -31,18 +60,6 @@ export const GetCRUDInstance = <T = any>(config: ICRUDInstanceOptions) => {
   app.post("/getOne", (req: Request, res: Response) => {
     const { requestParams } = req.body;
     GetOne(requestParams)
-      .then((resp) => {
-        res.status(200).send(resp);
-      })
-      .catch((err) => {
-        console.error("Error Making request\n", err);
-        res.status(500).send({ message: err.message ?? "Error Making request" });
-      });
-  });
-
-  app.post("/getPaginated", (req: Request, res: Response) => {
-    const { paginationParams } = req.body;
-    GetPaginatedData(paginationParams)
       .then((resp) => {
         res.status(200).send(resp);
       })
@@ -134,14 +151,18 @@ export const GetCRUDInstance = <T = any>(config: ICRUDInstanceOptions) => {
     return insertedData;
   };
 
-  const UpdateData = async (data: T): Promise<T> => {
-    let dataToBeUpdated: any = { ...data };
-    delete dataToBeUpdated[config.identifier];
-    const updateData = (await knexInstance<T>(config.tableName)
+  const UpdateData = async (data: T): Promise<T[]> => {
+    const updationData: T[] = (Array.isArray(data) ? data : [data]).map((iteration: T) => {
+      let dataToBeAdded: any = { ...iteration };
+      delete dataToBeAdded[config.identifier];
+      return dataToBeAdded;
+    });
+
+    const updatedData = (await knexInstance<T>(config.tableName)
       .returning("*")
-      .update(dataToBeUpdated)) as T;
-    config.onEvent && config.onEvent("updated", updateData);
-    return updateData;
+      .update(updationData as any)) as T[];
+    config.onEvent && config.onEvent("updated", updatedData);
+    return updatedData;
   };
 
   const DeleteData = async (value: any): Promise<boolean> => {
